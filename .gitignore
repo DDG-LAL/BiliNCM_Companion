@@ -1,0 +1,21 @@
+# ---- 运行时目录与第三方二进制（由 Release 提供，不入库）----
+current/
+packages/
+*.exe
+Update.exe
+.portable
+
+# ---- 凭据与运行状态（严禁入库）----
+config.json
+overlay-state.json
+probe-ncm.json
+*.tmp
+
+# ---- 日志 ----
+*.log
+*.log.1
+
+# ---- 系统 ----
+Thumbs.db
+desktop.ini
+.DS_Store

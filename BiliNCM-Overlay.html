@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>点歌队列</title>
+<style>
+  :root{
+    --bg: rgba(17,19,25,.88);
+    --panel: rgba(255,255,255,.045);
+    --line: rgba(255,255,255,.08);
+    --text:#f4f6fa;
+    --sub:#98a2b3;
+    --cyan:#22d3ee;
+    --green:#4ade80;
+    --amber:#fbbf24;
+    --red:#f87171;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%;margin:0;background:transparent;overflow:hidden}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    user-select:none;
+  }
+  .card{
+    position:relative;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:16px 16px 12px;
+    border-radius:20px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    box-shadow:0 14px 44px rgba(0,0,0,.34);
+    backdrop-filter:blur(14px);
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:-90px;left:-70px;
+    width:220px;height:220px;
+    background:radial-gradient(circle,rgba(34,211,238,.16),transparent 65%);
+    pointer-events:none;
+  }
+  .card::after{
+    content:"";
+    position:absolute;
+    right:-80px;bottom:-100px;
+    width:220px;height:220px;
+    background:radial-gradient(circle,rgba(74,222,128,.10),transparent 65%);
+    pointer-events:none;
+  }
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:8px;flex:none;
+  }
+  .brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.06em}
+  .brand-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 4px rgba(74,222,128,.12);
+    transition:background .2s,box-shadow .2s;
+  }
+  .brand-dot.paused{background:var(--amber);box-shadow:0 0 0 4px rgba(251,191,36,.12)}
+  .brand-dot.offline{background:var(--red);box-shadow:0 0 0 4px rgba(248,113,113,.12)}
+  .count{
+    font-size:11px;color:var(--cyan);
+    background:rgba(34,211,238,.10);
+    border:1px solid rgba(34,211,238,.18);
+    padding:3px 8px;border-radius:999px;
+    white-space:nowrap;
+  }
+  .current{
+    flex:none;
+    margin-top:12px;
+    padding:13px 14px;
+    border-radius:14px;
+    background:linear-gradient(135deg,rgba(74,222,128,.10),rgba(255,255,255,.015));
+    border:1px solid rgba(74,222,128,.16);
+  }
+  .label{
+    font-size:10px;letter-spacing:.16em;color:var(--sub);
+    text-transform:uppercase;
+  }
+  .cur-name{
+    margin-top:6px;
+    font-size:19px;font-weight:700;line-height:1.28;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    word-break:break-word;
+  }
+  .cur-meta{
+    margin-top:5px;
+    display:flex;align-items:center;gap:7px;
+    min-height:18px;
+    font-size:11px;color:var(--sub);
+  }
+  .cur-artist{
+    min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .badge{
+    flex:none;
+    font-size:10px;font-weight:700;letter-spacing:.03em;
+    padding:2px 7px;border-radius:999px;
+    white-space:nowrap;
+  }
+  .badge-d{color:var(--cyan);background:rgba(34,211,238,.14);border:1px solid rgba(34,211,238,.25)}
+  .badge-s{color:#aab3c0;background:rgba(170,179,192,.10);border:1px solid rgba(170,179,192,.20)}
+  .cur-by{
+    margin-left:auto;
+    flex:none;
+    color:var(--cyan);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    max-width:44%;
+  }
+  .queue{
+    flex:1;min-height:0;
+    display:flex;flex-direction:column;
+    margin-top:13px;
+  }
+  .queue-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:7px;
+  }
+  .queue-head .label{text-transform:none;letter-spacing:.10em}
+  .queue-list{
+    list-style:none;margin:0;padding:0;
+    flex:0 1 auto;
+    display:flex;flex-direction:column;gap:6px;
+    overflow:hidden;
+  }
+  .row{
+    flex:none;
+    display:flex;align-items:center;gap:9px;
+    padding:8px 9px;
+    border-radius:11px;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,.035);
+  }
+  .idx{
+    flex:none;
+    width:20px;height:20px;border-radius:6px;
+    display:grid;place-items:center;
+    font-size:10px;font-weight:700;
+    color:var(--cyan);
+    background:rgba(34,211,238,.12);
+  }
+  .row-main{flex:1;min-width:0}
+  .row-name{
+    font-size:12.5px;font-weight:600;line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .row-artist{
+    margin-top:2px;
+    font-size:10.5px;color:var(--sub);line-height:1.2;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .row-by{
+    flex:none;max-width:38%;
+    font-size:10.5px;color:var(--cyan);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .empty{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:var(--sub);
+    border:1px dashed rgba(255,255,255,.08);
+    border-radius:12px;
+    min-height:56px;
+  }
+  .more{
+    flex:none;
+    margin-top:6px;
+    font-size:10.5px;color:var(--sub);text-align:right;
+  }
+  footer{
+    flex:none;
+    margin-top:10px;
+    padding-top:9px;
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;gap:6px;
+    font-size:10.5px;color:var(--sub);
+    white-space:nowrap;overflow:hidden;
+  }
+  .status-dot{
+    flex:none;width:6px;height:6px;border-radius:50%;
+    background:var(--green);
+  }
+  .status-dot.paused{background:var(--amber)}
+  .status-dot.offline{background:var(--red)}
+  #statusText{overflow:hidden;text-overflow:ellipsis}
+  .alert{
+    flex:none;
+    margin-top:8px;
+    padding:7px 9px;
+    border-radius:9px;
+    font-size:10.5px;line-height:1.35;
+    color:#fecaca;
+    background:rgba(248,113,113,.13);
+    border:1px solid rgba(248,113,113,.28);
+  }
+  .stale .card{opacity:.55}
+  .stale .current{border-color:rgba(248,113,113,.18);background:rgba(248,113,113,.04)}
+  .stale .cur-name{color:var(--sub)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <div class="brand"><span class="brand-dot" id="brandDot"></span><span>点歌队列</span></div>
+      <div class="count" id="count">0 首待播</div>
+    </header>
+
+    <section class="current">
+      <div class="label">正在播放</div>
+      <div class="cur-name" id="curName">空闲中</div>
+      <div class="cur-meta">
+        <span class="cur-artist" id="curArtist"></span>
+        <span class="badge badge-s" id="curBadge" hidden></span>
+        <span class="cur-by" id="curBy"></span>
+      </div>
+    </section>
+
+    <section class="queue">
+      <div class="queue-head">
+        <div class="label">待播</div>
+        <div class="label" id="pendingCount">0 首</div>
+      </div>
+      <ol class="queue-list" id="pendingList"></ol>
+      <div class="empty" id="empty">暂无待播点歌</div>
+      <div class="more" id="more" hidden></div>
+    </section>
+
+    <footer>
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">连接中…</span>
+    </footer>
+
+    <div class="alert" id="alert" hidden></div>
+  </div>
+
+<script>
+(function () {
+  var MAX_ROWS = 6;
+  var ALERTS = {
+    bot_autoplay_on: '点歌机自动播放已被恢复；为避免切歌，兼容层没有强制暂停。请勿点暂停，等当前歌曲自然结束后再处理。'
+  };
+  var curName = document.getElementById('curName');
+  var curArtist = document.getElementById('curArtist');
+  var curBadge = document.getElementById('curBadge');
+  var curBy = document.getElementById('curBy');
+  var pendingList = document.getElementById('pendingList');
+  var pendingCount = document.getElementById('pendingCount');
+  var countBadge = document.getElementById('count');
+  var emptyEl = document.getElementById('empty');
+  var moreEl = document.getElementById('more');
+  var statusText = document.getElementById('statusText');
+  var statusDot = document.getElementById('statusDot');
+  var brandDot = document.getElementById('brandDot');
+  var alertEl = document.getElementById('alert');
+
+  function setText(el, text) {
+    if (el.textContent !== text) el.textContent = text;
+  }
+
+  function makeRow(index, item) {
+    var li = document.createElement('li');
+    li.className = 'row';
+
+    var idx = document.createElement('div');
+    idx.className = 'idx';
+    idx.textContent = String(index);
+
+    var main = document.createElement('div');
+    main.className = 'row-main';
+
+    var name = document.createElement('div');
+    name.className = 'row-name';
+    name.textContent = item.name || '未知歌曲';
+
+    var artist = document.createElement('div');
+    artist.className = 'row-artist';
+    artist.textContent = item.artists || '';
+
+    main.appendChild(name);
+    main.appendChild(artist);
+
+    var by = document.createElement('div');
+    by.className = 'row-by';
+    by.textContent = item.orderer ? ('by ' + item.orderer) : '';
+
+    li.appendChild(idx);
+    li.appendChild(main);
+    li.appendChild(by);
+    return li;
+  }
+
+  function renderDead() {
+    document.body.classList.add('stale');
+    setText(curName, '—');
+    setText(curArtist, '');
+    setText(curBy, '');
+    curBadge.hidden = true;
+    pendingList.textContent = '';
+    emptyEl.hidden = false;
+    setText(emptyEl, '等待 companion 数据…');
+    setText(pendingCount, '0 首');
+    setText(countBadge, '0 首待播');
+    moreEl.hidden = true;
+    setText(statusText, '数据断开 · 等待 companion');
+    statusDot.className = 'status-dot offline';
+    brandDot.className = 'brand-dot offline';
+    alertEl.hidden = true;
+  }
+
+  function render(state) {
+    if (!state || !state.ts || (Date.now() - state.ts > 8000)) {
+      renderDead();
+      return;
+    }
+
+    document.body.classList.remove('stale');
+    alertEl.hidden = true;
+
+    var pending = Array.isArray(state.pending) ? state.pending : [];
+    var current = state.current || null;
+
+    if (current) {
+      setText(curName, current.name || '未知歌曲');
+      setText(curArtist, current.artists || '');
+      var isD = current.badge === 'd';
+      curBadge.hidden = false;
+      curBadge.className = 'badge ' + (isD ? 'badge-d' : 'badge-s');
+      setText(curBadge, isD ? '点歌' : '歌单/手动');
+      setText(curBy, isD && current.orderer ? ('by ' + current.orderer) : '');
+    } else {
+      setText(curName, '空闲中');
+      setText(curArtist, '当前没有播放歌曲');
+      setText(curBy, '');
+      curBadge.hidden = true;
+    }
+
+    pendingList.textContent = '';
+    var shown = pending.slice(0, MAX_ROWS);
+    for (var i = 0; i < shown.length; i++) {
+      pendingList.appendChild(makeRow(i + 1, shown[i]));
+    }
+    emptyEl.hidden = pending.length > 0;
+    setText(emptyEl, '暂无待播点歌');
+
+    if (pending.length > shown.length) {
+      moreEl.hidden = false;
+      setText(moreEl, '还有 ' + (pending.length - shown.length) + ' 首待播');
+    } else {
+      moreEl.hidden = true;
+    }
+
+    var countText = pending.length + ' 首';
+    setText(pendingCount, countText);
+    setText(countBadge, pending.length + ' 首待播');
+
+    var parts = [];
+    if (state.bot === false) parts.push('bot 未连接');
+    if (state.ncm === false) parts.push('网易云未连接');
+    if (state.accepting === false) parts.push('接收点歌已暂停');
+    else parts.push('接收点歌中');
+    parts.push('待播 ' + pending.length + ' 首');
+    setText(statusText, parts.join(' · '));
+
+    var paused = state.accepting === false;
+    var offline = state.bot === false || state.ncm === false;
+    statusDot.className = 'status-dot' + (offline ? ' offline' : (paused ? ' paused' : ''));
+    brandDot.className = 'brand-dot' + (offline ? ' offline' : (paused ? ' paused' : ''));
+
+    if (state.alert) {
+      alertEl.hidden = false;
+      setText(alertEl, ALERTS[state.alert] || state.alert);
+    }
+  }
+
+  var timer = null;
+  function poll() {
+    fetch('/state?_=' + Date.now(), { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.json();
+      })
+      .then(render)
+      .catch(function () { renderDead(); })
+      .then(function () {
+        timer = setTimeout(poll, 1000);
+      });
+  }
+
+  poll();
+})();
+</script>
+<script>
+(function () {
+  if (!/[?&]debug=1/.test(location.search)) return;
+  setTimeout(function () {
+    function box(sel) {
+      var el = document.querySelector(sel);
+      if (!el) return null;
+      var r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, width: r.width, height: r.height };
+    }
+    var data = {
+      inner: { width: innerWidth, height: innerHeight },
+      dpr: devicePixelRatio,
+      scroll: { doc: document.documentElement.scrollWidth, body: document.body.scrollWidth },
+      card: box('.card'),
+      header: box('header'),
+      current: box('.current'),
+      queue: box('.queue'),
+      footer: box('footer'),
+      topBadge: box('.count'),
+      curBy: box('#curBy'),
+      empty: { hidden: document.getElementById('empty').hidden, display: getComputedStyle(document.getElementById('empty')).display },
+      rows: Array.prototype.map.call(document.querySelectorAll('#pendingList .row'), function (row) {
+        var r = row.getBoundingClientRect();
+        var by = row.querySelector('.row-by').getBoundingClientRect();
+        return { left: r.left, right: r.right, width: r.width, byRight: by.right };
+      }),
+      more: document.getElementById('more').hidden ? '' : document.getElementById('more').textContent,
+      pending: document.getElementById('pendingCount').textContent
+    };
+    var pre = document.createElement('pre');
+    pre.id = 'debugMetrics';
+    pre.hidden = true;
+    pre.textContent = JSON.stringify(data);
+    document.body.appendChild(pre);
+  }, 1200);
+})();
+</script>
+</body>
+</html>
