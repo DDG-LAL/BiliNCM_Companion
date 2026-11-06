@@ -125,6 +125,10 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 
 **<ins>填完房间号、确认连接正常后，可以回来看连接状态，但不要点 5555 里的任何操作按钮。尤其是「运行状态」页右下角「自动播放状态」旁边的「恢复」按钮——点它会让 bot 重新抢走播放权，Companion 的队列控制会失效。</ins>**
 
+<img src="docs/images/restore-autoplay-button.png" width="640" alt="5555 控制面板中的「恢复自动播放」按钮位置">
+
+**图中红圈标出的「恢复」按钮就是「恢复自动播放」，不要点。**
+
 :tired_face: 需要看真实播放状态，请打开 5566 浮层或网易云右侧「播放列表」，不要回 5555 点按钮。
 
 ### 2.4 添加 OBS 浮层
