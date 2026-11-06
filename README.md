@@ -1,7 +1,7 @@
-# BiliNCM Companion AI
+# BiliNCM Companion
 
 > 给 BiliNCM-Bot 加一层「不切歌」的点歌队列，外加一个 OBS 队列浮层。
-
+# 注意：本项目只适配网易云音乐2.10.13版本，其它版本都有可能无法正常工作
 `License: MIT` · `Platform: Windows 10/11 x64` · `PowerShell: 5.1` · `Bot: 1.0.1`
 
 ---
@@ -95,16 +95,18 @@ Get-FileHash .\BiliNCM_Companion_AI-1.0.1-full.zip -Algorithm SHA256
 
 ### 2.3 填直播间房间号
 
-1. 浏览器打开 <http://localhost:5555/>
+1. 浏览器打开 <http://localhost:5555/> ，<ins>注意这个bot只用于登录，其他功能都不可用
 2. 进 bot 后台的「连接 / 设置」页
 3. 填你的**直播间房间号**，保存
 4. 页面显示已连接即可
+5. <ins>**:tired_face: 在此之后不要在 <http://localhost:5555/> 进行任何的操作，尤其不要去点击其中调试页面的“恢复自动播放”，否则会导致运行出错**</ins>
 
 ### 2.4 添加 OBS 浮层
 
 1. OBS → 来源 → `+` → **浏览器**
 2. 名称随意，比如 `点歌队列`
-3. URL 填 `http://127.0.0.1:5566/`
+3. <ins>**:tired_face: URL 填 http://127.0.0.1:5566/ !!!!!!!!!**</ins>  
+   <ins>**:tired_face: 不要填2.3里面的 http://localhost:5555 !!!!!!!!!**</ins>
 4. 宽度 `420`，高度 `640`（按画面比例自己缩放）
 5. 其他保持默认，**不要**加自定义 CSS —— 页面背景本来就是透明的
 6. 确定后应看到深色卡片和「暂无待播点歌」
