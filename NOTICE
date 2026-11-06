@@ -1,4 +1,4 @@
-BiliNCM Companion AI — 第三方组件与来源声明
+BiliNCM_Companion — 第三方组件与来源声明
 ==========================================
 
 本仓库包含或分发以下内容：
@@ -11,7 +11,7 @@ BiliNCM Companion AI — 第三方组件与来源声明
          （依据上游 README「许可协议」一节；上游仓库未提供 LICENSE 文件）
    说明：本仓库不修改该程序的任何文件，仅在 Release 整合包中原样分发。
 
-2. BiliNCM Companion AI 脚本
+2. BiliNCM_Companion 脚本
    作者：DDG-LAL
    许可：MIT License
    范围：BiliNCM-Companion.ps1、BiliNCM-Launcher.ps1、BiliNCM-Overlay.ps1、
