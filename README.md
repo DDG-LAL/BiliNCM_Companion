@@ -12,6 +12,7 @@
 |---|---|---|
 | `http://localhost:5555/` | 点歌机后台 / 控制面板 | 只用于扫码登录、填直播间房间号、查看连接状态；**不要**用它控制播放或队列 |
 | `http://127.0.0.1:5566/` | OBS 队列浮层 | **OBS 浏览器源只能填这个地址** |
+| `http://127.0.0.1:5566/settings` | 浮层皮肤 / 背景设置页 | 只在普通浏览器打开；**不要填进 OBS** |
 
 
 
@@ -148,6 +149,19 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 5. 其他保持默认，**不要**加自定义 CSS —— 页面背景本来就是透明的
 6. 确定后应看到深色卡片和「暂无待播点歌」
 
+#### 可选：换皮肤 / 自定义背景
+
+浏览器打开 <http://127.0.0.1:5566/settings>。这个页面同样只给普通浏览器用，**不要填进 OBS**。
+
+- 6 套皮肤：默认暗色玻璃、霓虹赛博、雾白极简、樱花粉、复古像素、透明歌词
+- 可上传 PNG / JPEG 背景图（最大 12 MB），调整图片透明度、文字底衬和焦点位置
+- 右侧实时预览默认用示例数据；所有设置自动保存，1～2 秒后 OBS 浮层自动更新，不需要重启点歌机
+- 背景图只保存在本机 `overlay-assets\`，不会上传到网络
+
+<img src="docs/images/overlay-settings.png" width="900" alt="5566 浮层皮肤设置页，使用示例数据">
+
+<img src="docs/images/overlay-custom-background.png" width="300" alt="霓虹赛博皮肤加自定义背景的浮层效果，使用示例数据">
+
 ### 2.5 验收清单
 
 - [ ] 启动窗口最后显示 `点歌机已启动，CDP 已就绪`
@@ -215,6 +229,7 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 - 上方大卡片：当前歌 + 谁点的（`d` 标签 = 点歌来的，`manual` = 你手动放的）
 - 中间列表：接下来要放的点歌，最多 6 条，第 7 条起显示「还有 N 首」
 - 底部：🟢 正常 · 🟡 暂停接单 · 🔴 数据断开
+- 想换皮肤或加背景图：打开 <http://127.0.0.1:5566/settings>（只给普通浏览器用，不要填进 OBS）
 
 ### 3.5 下播
 
@@ -223,8 +238,8 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 ### 3.6 更新
 
 1. 下播后双击 `关闭点歌机.cmd`
-2. 下载新版 `scripts.zip`，把里面的 `.ps1` / `.html` / `.cmd` / `qrcode.js` 覆盖到原目录
-3. **不要覆盖 `current\` 文件夹和 `config.json`**，否则要重新扫码登录、重新填房间号
+2. 下载新版 `scripts.zip`，把里面的 `.ps1` / `.html` / `.cmd` / `qrcode.js` 覆盖到原目录（新版设置页 `BiliNCM-Overlay-Settings.html` 也在里面）
+3. **不要覆盖 `current\` 文件夹和 `config.json`**，否则要重新扫码登录、重新填房间号；想保留皮肤和背景，也不要删 `overlay-config.json` 和 `overlay-assets\`
 4. 重新启动
 
 ### 3.7 常见操作速查
@@ -247,7 +262,7 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 |---|---|---|
 | BiliNCM-Bot | 5555 | 点歌机后台 / 控制面板：接弹幕、维护队列、提供 `/data`；只用于扫码登录、填房间号、看连接状态 |
 | Companion | — | 每秒读 bot 队列，把新点歌写进网易云；生成浮层状态文件 |
-| Overlay | 5566 | OBS 浮层页面：把状态文件渲染成网页；**唯一能填进 OBS 的地址** |
+| Overlay | 5566 | OBS 浮层页面 + `/settings` 皮肤 / 背景设置页：把状态文件渲染成网页；**唯一能填进 OBS 的地址** |
 | 网易云 CDP | 9222 | Companion 通过它操作播放列表；不需要你手动打开 |
 
 你只需要记住 5555 和 5566；9222 是 Companion 自己用的，不要填进 OBS。
@@ -365,7 +380,11 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 | 浮层显示「数据断开」 | Companion 没跑 / 已退出 | 看 `companion.log`，重启点歌机 |
 | 点歌没进网易云 | 网易云未登录 / CDP 断了 / 搜不到歌 | 先手动搜一次确认歌存在 |
 | 二维码不显示 | 网络 / B 站接口变动 | 双击 `调试登录.cmd`，看 `login-debug.log` |
+| 设置页打不开 | 浮层服务没启动 / 端口被占 | 先打开 `http://127.0.0.1:5566/health` 确认正常，再看 `overlay.log`；刷新页面 |
+| 换了皮肤 / 背景但 OBS 没变 | 设置没保存 / OBS 浏览器源缓存 | 确认设置页右上角显示「已保存」，等 1～2 秒；在 OBS 里刷新浏览器源 |
+| 自定义背景不显示 | 图片文件被删 / 手动改了文件名 | 回设置页重新上传；不要改 `overlay-assets\` 里的文件名；刷新浏览器源 |
 | 浮层白底 | 页面没加载成功 | 浏览器直接开 `http://127.0.0.1:5566/` 测试 |
+| 透明歌词皮肤在 OBS 里不透明 | 浏览器源加了自定义 CSS / 黑色背景 | 清空浏览器源的自定义 CSS；页面背景本身是透明的 |
 | 置顶没反应 | **预期行为** | 去网易云里手动拖 |
 | 当前歌被切了 | 有人发了 `插队` / `切歌` | 关掉这两条指令的权限 |
 
@@ -383,6 +402,9 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 | `BiliNCM-Launcher.ps1` | 启动编排、CDP 检查 | 否 |
 | `BiliNCM-Companion.ps1` | 队列同步核心 | 否 |
 | `BiliNCM-Overlay.ps1` / `.html` | 浮层服务与页面 | 不用浮层可删 |
+| `BiliNCM-Overlay-Settings.html` | 皮肤 / 背景设置页（`5566/settings`） | 不用设置页可删；删后浮层仍正常 |
+| `overlay-config.json` | 皮肤 / 背景配置（自动生成） | 删掉即恢复默认；会丢失当前皮肤和背景设置 |
+| `overlay-assets\` | 上传的背景图（自动生成） | 删掉即删除背景；不要手动改文件名 |
 | `BiliLoginFix.ps1` | B 站扫码登录 | 否 |
 | `Capture-BotLogs.ps1` | 抓 bot 运行日志 | 可删（不影响功能） |
 | `Test-NcmCdp.ps1` | CDP 连通性诊断 | 可删 |
@@ -411,6 +433,7 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 
 - 所有服务只监听 `127.0.0.1`，**不要**把 5555 / 5566 映射到公网
 - `current\config.json` 保存着你的 B 站 Cookie 和登录凭证：**不要截图、不要上传、不要发给别人**
+- 自定义背景图只保存在本机 `overlay-assets\`，不会上传到网络；`overlay-config.json` 只记录皮肤和图片参数，不包含 Cookie / 房间号
 - 本仓库和 Release 包里**不包含任何 Cookie、日志、房间号**
 - 日志里的 `SESSDATA` 已自动脱敏
 - 本项目不收集任何数据，不联网上报
