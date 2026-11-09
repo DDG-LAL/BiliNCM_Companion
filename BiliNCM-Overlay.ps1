@@ -371,6 +371,14 @@ function Save-OverlayImage {
             return [pscustomobject]@{ ok = $false; error = 'too_large_pixels' }
         }
 
+        # Capture the source format before RotateFlip: rotation turns RawFormat into MemoryBmp.
+        $format = $img.RawFormat
+        $isPng = ($format.Guid -eq [System.Drawing.Imaging.ImageFormat]::Png.Guid)
+        $isJpeg = ($format.Guid -eq [System.Drawing.Imaging.ImageFormat]::Jpeg.Guid)
+        if (-not $isPng -and -not $isJpeg) {
+            return [pscustomobject]@{ ok = $false; error = 'unsupported_type' }
+        }
+
         $orientation = 1
         try {
             $prop = $img.GetPropertyItem(0x0112)
@@ -390,12 +398,6 @@ function Save-OverlayImage {
 
         $srcW = $img.Width
         $srcH = $img.Height
-        $format = $img.RawFormat
-        $isPng = ($format.Guid -eq [System.Drawing.Imaging.ImageFormat]::Png.Guid)
-        $isJpeg = ($format.Guid -eq [System.Drawing.Imaging.ImageFormat]::Jpeg.Guid)
-        if (-not $isPng -and -not $isJpeg) {
-            return [pscustomobject]@{ ok = $false; error = 'unsupported_type' }
-        }
 
         $scale = 1.0
         $longEdge = [Math]::Max($srcW, $srcH)
