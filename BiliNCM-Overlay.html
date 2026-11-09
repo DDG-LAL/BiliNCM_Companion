@@ -630,10 +630,11 @@
     var root = document.documentElement;
     if (file) root.style.setProperty('--bg-image', 'url("/assets/' + encodeURIComponent(file) + '")');
     else root.style.setProperty('--bg-image', 'none');
+    var effectiveScrim = opacity > 0 ? scrim : 0;
     root.style.setProperty('--bg-opacity', String(opacity / 100));
     root.style.setProperty('--bg-focus', fx + '% ' + fy + '%');
-    root.style.setProperty('--scrim-alpha', String((scrim / 100) * 0.92));
-    root.style.setProperty('--scrim-alpha-2', String((scrim / 100) * 0.72));
+    root.style.setProperty('--scrim-alpha', String((effectiveScrim / 100) * 0.92));
+    root.style.setProperty('--scrim-alpha-2', String((effectiveScrim / 100) * 0.72));
   }
 
   function pollConfig() {
