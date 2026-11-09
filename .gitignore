@@ -8,6 +8,8 @@ Update.exe
 # ---- 凭据与运行状态（严禁入库）----
 config.json
 overlay-state.json
+overlay-config.json
+overlay-assets/
 probe-ncm.json
 *.tmp
 

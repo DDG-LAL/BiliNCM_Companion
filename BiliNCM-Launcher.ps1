@@ -638,6 +638,7 @@ function Start-OverlayProcess {
     do {
         if (Test-OverlayHealth) {
             Write-Ok2 ("OBS 覆盖层已启动: http://127.0.0.1:{0}/" -f $OverlayPort)
+            Write-Ok2 ("浮层皮肤设置: http://127.0.0.1:{0}/settings" -f $OverlayPort)
             return
         }
         Start-Sleep -Milliseconds 300

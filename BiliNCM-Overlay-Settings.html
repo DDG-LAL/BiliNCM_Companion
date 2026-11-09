@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>浮层皮肤设置 · BiliNCM_Companion</title>
+<style>
+  :root{
+    --page:#0b0f17;
+    --panel:#121826;
+    --panel-2:#0f1520;
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.16);
+    --text:#e5edf7;
+    --sub:#8fa0b5;
+    --accent:#22d3ee;
+    --accent-soft:rgba(34,211,238,.10);
+    --accent-line:rgba(34,211,238,.38);
+    --good:#34d399;
+    --bad:#fb7185;
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{min-height:100%}
+  body{
+    margin:0;
+    color:var(--text);
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(circle at 12% 0%,rgba(34,211,238,.10),transparent 32rem),
+      radial-gradient(circle at 92% 8%,rgba(129,140,248,.10),transparent 30rem),
+      var(--page);
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input{font:inherit}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1240px;margin:0 auto;padding:28px 24px 48px}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:22px}
+  h1{margin:0;font-size:24px;letter-spacing:.01em}
+  .top p{margin:8px 0 0;max-width:720px;color:var(--sub);font-size:13px;line-height:1.65}
+  .top p b{color:#c9f7ff;font-weight:700}
+  .save-state{
+    flex:none;margin-top:4px;padding:7px 12px;border-radius:999px;
+    font-size:12px;white-space:nowrap;
+    color:var(--sub);background:rgba(255,255,255,.04);border:1px solid var(--line);
+  }
+  .save-state.ok{color:#bbf7d0;background:rgba(52,211,153,.10);border-color:rgba(52,211,153,.28)}
+  .save-state.pending{color:#fde68a;background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.25)}
+  .save-state.bad{color:#fecdd3;background:rgba(251,113,133,.10);border-color:rgba(251,113,133,.28)}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start}
+  .controls{display:flex;flex-direction:column;gap:16px}
+  .block{
+    padding:18px;border-radius:var(--radius);
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+    border:1px solid var(--line);
+    box-shadow:0 12px 34px rgba(0,0,0,.14);
+  }
+  .block h2{margin:0 0 12px;font-size:13px;letter-spacing:.08em;color:#cfe3f5}
+  .hint{margin:10px 0 0;color:var(--sub);font-size:11.5px;line-height:1.6}
+  .hint b{color:#d9e7f5;font-weight:700}
+
+  .skin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .skin-card{
+    display:block;width:100%;padding:10px;text-align:left;cursor:pointer;
+    color:var(--text);background:rgba(255,255,255,.025);
+    border:1px solid var(--line);border-radius:14px;
+    transition:border-color .15s,box-shadow .15s,transform .15s;
+  }
+  .skin-card:hover{border-color:rgba(34,211,238,.36);transform:translateY(-1px)}
+  .skin-card.selected{
+    border-color:var(--accent);
+    box-shadow:0 0 0 1px rgba(34,211,238,.26),0 10px 26px rgba(0,0,0,.25);
+  }
+  .mini{
+    display:block;height:58px;padding:9px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+  }
+  .mini i{display:block;height:6px;margin-bottom:5px;border-radius:3px}
+  .mini i:nth-child(1){width:54%;height:9px}
+  .mini i:nth-child(2){width:78%}
+  .mini i:nth-child(3){width:64%}
+  .mini-checker{
+    background-color:#0d121b;
+    background-image:
+      linear-gradient(45deg,#1a2230 25%,transparent 25%),
+      linear-gradient(-45deg,#1a2230 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1a2230 75%),
+      linear-gradient(-45deg,transparent 75%,#1a2230 75%);
+    background-size:12px 12px;
+    background-position:0 0,0 6px,6px -6px,-6px 0;
+  }
+  .skin-name{display:block;margin-top:9px;font-size:12.5px;font-weight:700}
+  .skin-desc{display:block;margin-top:2px;font-size:10.5px;color:var(--sub)}
+
+  .drop{
+    display:block;padding:22px 16px;text-align:center;cursor:pointer;
+    border:1px dashed rgba(255,255,255,.18);border-radius:14px;
+    background:rgba(255,255,255,.018);
+    transition:border-color .15s,background .15s;
+  }
+  .drop:hover,.drop.drag{border-color:var(--accent);background:rgba(34,211,238,.05)}
+  .drop.busy{cursor:wait;opacity:.72}
+  .drop strong{display:block;font-size:13px}
+  .drop span{display:block;margin-top:6px;font-size:11.5px;color:var(--sub)}
+  .asset-row{
+    display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px;
+    border-radius:12px;background:rgba(255,255,255,.025);border:1px solid var(--line);
+  }
+  .asset-row img{
+    flex:none;width:76px;height:54px;object-fit:cover;border-radius:8px;
+    background:#0b1018;border:1px solid var(--line);
+  }
+  .asset-meta{flex:1;min-width:0}
+  .asset-meta strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .asset-meta span{display:block;margin-top:3px;font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:9px 14px;border-radius:10px;cursor:pointer;
+    color:var(--text);background:rgba(255,255,255,.045);
+    border:1px solid var(--line);font-size:12.5px;
+    transition:border-color .15s,background .15s,opacity .15s;
+  }
+  .btn:hover{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.07)}
+  .btn.primary{color:#c9f7ff;background:rgba(34,211,238,.13);border-color:rgba(34,211,238,.42)}
+  .btn.danger{color:#fecdd3;background:rgba(251,113,133,.09);border-color:rgba(251,113,133,.28)}
+  .btn.danger:hover{border-color:rgba(251,113,133,.55);background:rgba(251,113,133,.14)}
+  .btn:disabled{opacity:.42;cursor:not-allowed}
+  .btn:focus-visible,.skin-card:focus-visible,.seg-btn:focus-visible,.focus-btn:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+
+  .seg{display:flex;flex-wrap:wrap;gap:8px}
+  .seg-btn{
+    padding:8px 12px;border-radius:9px;cursor:pointer;
+    color:var(--sub);background:rgba(255,255,255,.025);
+    border:1px solid var(--line);font-size:12px;
+  }
+  .seg-btn:hover{border-color:rgba(34,211,238,.32);color:var(--text)}
+  .seg-btn.selected{color:#c9f7ff;background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.42)}
+  .seg-btn:disabled{opacity:.42;cursor:not-allowed}
+
+  .field{display:block;margin-top:14px}
+  .field:first-child{margin-top:0}
+  .field > span{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:12px;color:#c7d5e5}
+  .field b{color:var(--accent);font-weight:700}
+  input[type="range"]{width:100%;accent-color:var(--accent)}
+  input[type="range"]:disabled{opacity:.4}
+
+  .focus-grid{display:grid;grid-template-columns:repeat(3,42px);gap:6px}
+  .focus-btn{
+    width:42px;height:32px;border-radius:8px;cursor:pointer;
+    color:var(--sub);background:rgba(255,255,255,.025);
+    border:1px solid var(--line);font-size:14px;line-height:1;
+  }
+  .focus-btn:hover{border-color:rgba(34,211,238,.32);color:var(--text)}
+  .focus-btn.selected{color:#c9f7ff;background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.42)}
+  .focus-btn:disabled{opacity:.35;cursor:not-allowed}
+
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:2px}
+
+  .preview-col{
+    position:sticky;top:24px;
+    padding:16px;border-radius:var(--radius);
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+    border:1px solid var(--line);
+    box-shadow:0 12px 34px rgba(0,0,0,.14);
+  }
+  .preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .preview-head h2{margin:0;font-size:13px;letter-spacing:.08em;color:#cfe3f5}
+  .preview-head label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);cursor:pointer}
+  .preview-head input{accent-color:var(--accent)}
+  .preview-box{
+    position:relative;width:303px;height:461px;margin:0 auto;overflow:hidden;
+    border-radius:14px;
+    background-color:#0d121b;
+    background-image:
+      linear-gradient(45deg,#151d29 25%,transparent 25%),
+      linear-gradient(-45deg,#151d29 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#151d29 75%),
+      linear-gradient(-45deg,transparent 75%,#151d29 75%);
+    background-size:16px 16px;
+    background-position:0 0,0 8px,8px -8px,-8px 0;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);
+  }
+  .preview-scaler{
+    position:absolute;top:0;left:0;width:420px;height:640px;
+    transform:scale(.72);transform-origin:top left;
+  }
+  .preview-scaler iframe{display:block;width:420px;height:640px;border:0;background:transparent}
+  .preview-col .hint{text-align:center}
+  .preview-note{
+    margin-top:12px;padding:9px 10px;border-radius:10px;
+    color:#b7c7d8;background:rgba(34,211,238,.06);
+    border:1px solid rgba(34,211,238,.16);
+    font-size:11px;line-height:1.55;
+  }
+
+  @media (max-width:1100px){
+    .skin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .preview-col{position:static}
+    .preview-box{width:303px;height:461px}
+  }
+  @media (max-width:560px){
+    .page{padding:20px 14px 36px}
+    .top{display:block}
+    .save-state{display:inline-block;margin-top:14px}
+    .skin-grid{grid-template-columns:1fr}
+    .asset-row{flex-wrap:wrap}
+    .asset-meta{flex-basis:calc(100% - 100px)}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>浮层皮肤设置</h1>
+      <p>
+        这个页面只在普通浏览器里使用。<b>OBS 浏览器源仍然只填 <code>http://127.0.0.1:5566/</code></b>，不要填 <code>/settings</code>。保存后浮层会在 1～2 秒内自动更新，不需要重启点歌机。
+      </p>
+    </div>
+    <div class="save-state" id="saveState">读取中…</div>
+  </header>
+
+  <main class="layout">
+    <section class="controls">
+      <section class="block">
+        <h2>内置皮肤</h2>
+        <div class="skin-grid" id="skinGrid"></div>
+      </section>
+
+      <section class="block">
+        <h2>自定义背景</h2>
+        <div class="drop" id="drop" role="button" tabindex="0" aria-label="上传自定义背景图片">
+          <input type="file" id="fileInput" accept="image/png,image/jpeg" hidden>
+          <strong id="dropTitle">点击或拖入图片</strong>
+          <span>支持 PNG / JPEG，最大 12 MB；只保存在本机</span>
+        </div>
+        <div class="asset-row" id="assetRow" hidden>
+          <img id="assetThumb" alt="当前背景图预览">
+          <div class="asset-meta">
+            <strong id="assetName"></strong>
+            <span id="assetInfo"></span>
+          </div>
+          <button type="button" class="btn danger" id="removeBg">删除背景</button>
+        </div>
+        <p class="hint">图片会在服务端等比缩小到最长边 3840 像素，并去掉 EXIF 等元数据；透明 PNG 会保留透明区域。</p>
+      </section>
+
+      <section class="block">
+        <h2>适配方式</h2>
+        <div class="seg" id="fitSeg"></div>
+        <p class="hint" id="fitHint"></p>
+      </section>
+
+      <section class="block">
+        <h2>画面调整</h2>
+        <label class="field">
+          <span>图片透明度 <b id="opacityVal">100%</b></span>
+          <input type="range" id="opacity" min="0" max="100" step="1" value="100">
+        </label>
+        <label class="field">
+          <span>文字底衬 <b id="scrimVal">35%</b></span>
+          <input type="range" id="scrim" min="0" max="100" step="1" value="35">
+        </label>
+        <p class="hint">
+          文字底衬是在背景图和文字之间加的一层半透明遮罩：<b>0 最清楚但文字可能看不清，100 文字最清楚但图片最不明显</b>。遇到亮图、花图时把它调高即可。
+        </p>
+        <div class="field">
+          <span>焦点位置</span>
+          <div class="focus-grid" id="focusGrid"></div>
+        </div>
+        <p class="hint">焦点只影响「填充裁切」和「完整显示 + 模糊」里的裁切部分，用来决定保留图片的哪一块。</p>
+      </section>
+
+      <div class="actions">
+        <button type="button" class="btn" id="reset">恢复默认</button>
+        <a class="btn" id="openOverlay" href="/" target="_blank" rel="noopener">打开浮层</a>
+      </div>
+    </section>
+
+    <aside class="preview-col">
+      <div class="preview-head">
+        <h2>实时预览</h2>
+        <label><input type="checkbox" id="livePreview"> 实时队列</label>
+      </div>
+      <div class="preview-box">
+        <div class="preview-scaler">
+          <iframe id="preview" src="/?demo=1" title="浮层预览"></iframe>
+        </div>
+      </div>
+      <p class="hint">预览按 420×640 渲染，再缩小显示；建议 OBS 浏览器源也使用这个比例。</p>
+      <div class="preview-note">
+        默认显示示例数据，避免暴露真实用户名。勾选「实时队列」可以看当前点歌数据。
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SKINS = [
+    {
+      id: 'default',
+      name: '默认暗色玻璃',
+      desc: '当前样式，深色玻璃',
+      bg: '#111319',
+      text: '#f4f6fa',
+      accent: '#22d3ee',
+      radius: '10px'
+    },
+    {
+      id: 'neon',
+      name: '霓虹赛博',
+      desc: '青 / 洋红发光',
+      bg: 'linear-gradient(160deg,#060a14,#0e061a)',
+      text: '#eafcff',
+      accent: '#22d3ee',
+      radius: '10px'
+    },
+    {
+      id: 'mist',
+      name: '雾白极简',
+      desc: '浅色半透明',
+      bg: 'linear-gradient(160deg,#f8fafc,#edf2f7)',
+      text: '#0f172a',
+      accent: '#4f46e5',
+      radius: '10px'
+    },
+    {
+      id: 'sakura',
+      name: '樱花粉',
+      desc: '粉白柔和',
+      bg: 'linear-gradient(160deg,#fff7fa,#ffebf3)',
+      text: '#4a2233',
+      accent: '#db2777',
+      radius: '10px'
+    },
+    {
+      id: 'pixel',
+      name: '复古像素',
+      desc: '硬边框 / 等宽字',
+      bg: '#10141f',
+      text: '#e5e7eb',
+      accent: '#a3e635',
+      radius: '0px'
+    },
+    {
+      id: 'lyric',
+      name: '透明歌词',
+      desc: '无卡片底色',
+      bg: 'transparent',
+      text: '#ffffff',
+      accent: '#7dd3fc',
+      radius: '8px'
+    }
+  ];
+
+  var FITS = [
+    { id: 'cover', label: '填充裁切', hint: '铺满整个浮层，超出部分裁掉，不变形。默认推荐。' },
+    { id: 'contain-blur', label: '完整显示 + 模糊', hint: '整张图完整居中，空白处用同一张图放大模糊填充。比例差异大时最推荐。' },
+    { id: 'stretch', label: '拉伸铺满', hint: '强行铺满整个浮层，图片会变形，一般不建议。' }
+  ];
+
+  var DEFAULT_CONFIG = {
+    version: 1,
+    skin: 'default',
+    background: {
+      file: '',
+      fit: 'cover',
+      opacity: 100,
+      scrim: 35,
+      focusX: 50,
+      focusY: 50
+    }
+  };
+
+  var skinIds = SKINS.map(function (skin) { return skin.id; });
+  var config = clone(DEFAULT_CONFIG);
+  var editVersion = 0;
+  var saving = false;
+  var pendingSave = false;
+  var uploading = false;
+
+  var els = {
+    saveState: document.getElementById('saveState'),
+    skinGrid: document.getElementById('skinGrid'),
+    drop: document.getElementById('drop'),
+    dropTitle: document.getElementById('dropTitle'),
+    fileInput: document.getElementById('fileInput'),
+    assetRow: document.getElementById('assetRow'),
+    assetThumb: document.getElementById('assetThumb'),
+    assetName: document.getElementById('assetName'),
+    assetInfo: document.getElementById('assetInfo'),
+    removeBg: document.getElementById('removeBg'),
+    fitSeg: document.getElementById('fitSeg'),
+    fitHint: document.getElementById('fitHint'),
+    opacity: document.getElementById('opacity'),
+    opacityVal: document.getElementById('opacityVal'),
+    scrim: document.getElementById('scrim'),
+    scrimVal: document.getElementById('scrimVal'),
+    focusGrid: document.getElementById('focusGrid'),
+    reset: document.getElementById('reset'),
+    openOverlay: document.getElementById('openOverlay'),
+    livePreview: document.getElementById('livePreview'),
+    preview: document.getElementById('preview')
+  };
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function clampInt(value, min, max, fallback) {
+    var n = parseInt(value, 10);
+    if (isNaN(n)) n = fallback;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  function snapFocus(value, fallback) {
+    var n = parseInt(value, 10);
+    if (isNaN(n)) n = fallback;
+    if (n < 25) return 0;
+    if (n < 75) return 50;
+    return 100;
+  }
+
+  function normalize(raw) {
+    var c = clone(DEFAULT_CONFIG);
+    if (!raw || typeof raw !== 'object') return c;
+
+    var skin = String(raw.skin || '');
+    if (skinIds.indexOf(skin) >= 0) c.skin = skin;
+
+    var bg = raw.background || {};
+    var file = typeof bg.file === 'string' ? bg.file : '';
+    if (/^bg-[A-Za-z0-9-]+\.(png|jpg|jpeg)$/.test(file)) {
+      c.background.file = file;
+    }
+
+    var fit = String(bg.fit || '');
+    if (FITS.some(function (item) { return item.id === fit; })) {
+      c.background.fit = fit;
+    }
+
+    c.background.opacity = clampInt(bg.opacity, 0, 100, 100);
+    c.background.scrim = clampInt(bg.scrim, 0, 100, 35);
+    c.background.focusX = snapFocus(bg.focusX, 50);
+    c.background.focusY = snapFocus(bg.focusY, 50);
+    return c;
+  }
+
+  function mapError(code) {
+    var text = String(code || '');
+    var map = {
+      too_large: '图片太大（最大 12 MB）',
+      too_large_pixels: '图片像素太大，请先压缩',
+      unsupported_type: '只支持 PNG / JPEG',
+      decode_failed: '图片无法解码，请换一张',
+      empty_file: '没有读到图片内容',
+      save_failed: '配置保存失败，请检查目录权限',
+      invalid_json: '配置格式错误',
+      origin_denied: '请求来源不被允许',
+      empty_body: '请求内容为空',
+      http_413: '图片太大',
+      http_415: '只支持 PNG / JPEG',
+      'Failed to fetch': '无法连接到 5566，请确认点歌机正在运行'
+    };
+    return map[text] || text || '未知错误';
+  }
+
+  function setStatus(text, kind) {
+    els.saveState.textContent = text;
+    els.saveState.className = 'save-state' + (kind ? ' ' + kind : '');
+  }
+
+  function touch() {
+    editVersion += 1;
+  }
+
+  function readJson(res) {
+    return res.text().then(function (text) {
+      var data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (err) {
+        data = {};
+      }
+      if (!res.ok) {
+        throw new Error((data && data.error) ? data.error : ('http_' + res.status));
+      }
+      return data;
+    });
+  }
+
+  function postConfig() {
+    try {
+      if (els.preview.contentWindow) {
+        els.preview.contentWindow.postMessage({
+          type: 'bilicnm-overlay-config',
+          config: config
+        }, location.origin);
+      }
+    } catch (err) { }
+  }
+
+  function buildSkinGrid() {
+    SKINS.forEach(function (skin) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'skin-card';
+      btn.setAttribute('data-skin', skin.id);
+      btn.setAttribute('aria-pressed', 'false');
+
+      var mini = document.createElement('span');
+      mini.className = 'mini' + (skin.id === 'lyric' ? ' mini-checker' : '');
+      mini.style.borderRadius = skin.radius;
+      if (skin.id !== 'lyric') mini.style.background = skin.bg;
+
+      for (var i = 0; i < 3; i++) {
+        var bar = document.createElement('i');
+        bar.style.background = i === 0 ? skin.accent : skin.text;
+        bar.style.opacity = i === 2 ? '.55' : '.9';
+        mini.appendChild(bar);
+      }
+
+      var name = document.createElement('span');
+      name.className = 'skin-name';
+      name.textContent = skin.name;
+
+      var desc = document.createElement('span');
+      desc.className = 'skin-desc';
+      desc.textContent = skin.desc;
+
+      btn.appendChild(mini);
+      btn.appendChild(name);
+      btn.appendChild(desc);
+      btn.addEventListener('click', function () {
+        if (config.skin === skin.id) return;
+        config.skin = skin.id;
+        touch();
+        render();
+        saveConfig();
+      });
+
+      els.skinGrid.appendChild(btn);
+    });
+  }
+
+  function buildFitButtons() {
+    FITS.forEach(function (fit) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'seg-btn';
+      btn.setAttribute('data-fit', fit.id);
+      btn.textContent = fit.label;
+      btn.addEventListener('click', function () {
+        if (config.background.fit === fit.id) return;
+        config.background.fit = fit.id;
+        touch();
+        render();
+        saveConfig();
+      });
+      els.fitSeg.appendChild(btn);
+    });
+  }
+
+  function buildFocusGrid() {
+    var points = [
+      [0, 0, '↖', '左上'],
+      [50, 0, '↑', '上'],
+      [100, 0, '↗', '右上'],
+      [0, 50, '←', '左'],
+      [50, 50, '•', '中'],
+      [100, 50, '→', '右'],
+      [0, 100, '↙', '左下'],
+      [50, 100, '↓', '下'],
+      [100, 100, '↘', '右下']
+    ];
+
+    points.forEach(function (point) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'focus-btn';
+      btn.textContent = point[2];
+      btn.title = point[3];
+      btn.setAttribute('data-x', String(point[0]));
+      btn.setAttribute('data-y', String(point[1]));
+      btn.setAttribute('aria-label', point[3]);
+      btn.addEventListener('click', function () {
+        if (config.background.focusX === point[0] && config.background.focusY === point[1]) return;
+        config.background.focusX = point[0];
+        config.background.focusY = point[1];
+        touch();
+        render();
+        saveConfig();
+      });
+      els.focusGrid.appendChild(btn);
+    });
+  }
+
+  function renderSkinState() {
+    var cards = els.skinGrid.querySelectorAll('.skin-card');
+    for (var i = 0; i < cards.length; i++) {
+      var selected = cards[i].getAttribute('data-skin') === config.skin;
+      cards[i].classList.toggle('selected', selected);
+      cards[i].setAttribute('aria-pressed', selected ? 'true' : 'false');
+    }
+  }
+
+  function renderFitState() {
+    var hasBg = !!config.background.file;
+    var active = null;
+    var buttons = els.fitSeg.querySelectorAll('.seg-btn');
+    for (var i = 0; i < buttons.length; i++) {
+      var id = buttons[i].getAttribute('data-fit');
+      var selected = id === config.background.fit;
+      buttons[i].classList.toggle('selected', selected);
+      buttons[i].disabled = !hasBg;
+      if (selected) active = id;
+    }
+    for (var j = 0; j < FITS.length; j++) {
+      if (FITS[j].id === active) {
+        els.fitHint.textContent = FITS[j].hint;
+        break;
+      }
+    }
+  }
+
+  function renderFocusState() {
+    var hasBg = !!config.background.file;
+    var disabled = !hasBg || config.background.fit === 'stretch';
+    var buttons = els.focusGrid.querySelectorAll('.focus-btn');
+    for (var i = 0; i < buttons.length; i++) {
+      var x = parseInt(buttons[i].getAttribute('data-x'), 10);
+      var y = parseInt(buttons[i].getAttribute('data-y'), 10);
+      var selected = x === config.background.focusX && y === config.background.focusY;
+      buttons[i].classList.toggle('selected', selected);
+      buttons[i].disabled = disabled;
+    }
+  }
+
+  function renderAsset() {
+    var file = config.background.file;
+    if (file) {
+      els.assetRow.hidden = false;
+      els.removeBg.disabled = false;
+      els.assetName.textContent = file;
+      if (els.assetThumb.getAttribute('data-file') !== file) {
+        els.assetThumb.setAttribute('data-file', file);
+        els.assetInfo.textContent = '已应用';
+        els.assetThumb.src = '/assets/' + encodeURIComponent(file) + '?v=' + Date.now();
+      }
+      els.dropTitle.textContent = '点击或拖入新图片替换';
+    } else {
+      els.assetRow.hidden = true;
+      els.removeBg.disabled = true;
+      els.assetThumb.removeAttribute('data-file');
+      els.assetThumb.removeAttribute('src');
+      els.assetName.textContent = '';
+      els.assetInfo.textContent = '';
+      els.dropTitle.textContent = '点击或拖入图片';
+    }
+
+    var hasBg = !!file;
+    els.opacity.disabled = !hasBg;
+    els.scrim.disabled = !hasBg;
+  }
+
+  function renderControls() {
+    els.opacity.value = String(config.background.opacity);
+    els.opacityVal.textContent = config.background.opacity + '%';
+    els.scrim.value = String(config.background.scrim);
+    els.scrimVal.textContent = config.background.scrim + '%';
+    renderSkinState();
+    renderFitState();
+    renderFocusState();
+    renderAsset();
+  }
+
+  function render() {
+    renderControls();
+    postConfig();
+  }
+
+  function loadConfig() {
+    setStatus('读取中…', 'pending');
+    fetch('/api/overlay-config?_=' + Date.now(), { cache: 'no-store' })
+      .then(readJson)
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || 'load_failed');
+        config = normalize(data.config);
+        render();
+        setStatus('已保存', 'ok');
+      })
+      .catch(function (err) {
+        render();
+        setStatus('读取失败：' + mapError(err.message), 'bad');
+        console.error(err);
+      });
+  }
+
+  function saveConfig() {
+    touch();
+    if (saving) {
+      pendingSave = true;
+      return;
+    }
+    saving = true;
+    var myVersion = editVersion;
+    var body = JSON.stringify(config);
+    setStatus('保存中…', 'pending');
+
+    fetch('/api/overlay-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body,
+      cache: 'no-store'
+    })
+      .then(readJson)
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || 'save_failed');
+        if (myVersion === editVersion) {
+          config = normalize(data.config);
+          render();
+          setStatus('已保存', 'ok');
+        }
+      })
+      .catch(function (err) {
+        if (myVersion === editVersion) {
+          setStatus('保存失败：' + mapError(err.message), 'bad');
+        }
+        console.error(err);
+      })
+      .then(function () {
+        saving = false;
+        if (pendingSave) {
+          pendingSave = false;
+          saveConfig();
+        }
+      });
+  }
+
+  function handleFile(file) {
+    if (!file || uploading) return;
+
+    var type = String(file.type || '');
+    var extOk = /\.(png|jpe?g)$/i.test(String(file.name || ''));
+    var typeOk = type === 'image/png' || type === 'image/jpeg' || type === 'image/jpg' || extOk;
+    if (!typeOk) {
+      setStatus('只支持 PNG / JPEG', 'bad');
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      setStatus('图片不能超过 12 MB', 'bad');
+      return;
+    }
+
+    uploading = true;
+    els.drop.classList.add('busy');
+    setStatus('上传处理中…', 'pending');
+
+    fetch('/api/overlay-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': type || 'application/octet-stream' },
+      body: file,
+      cache: 'no-store'
+    })
+      .then(readJson)
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || 'upload_failed');
+        var next = normalize(data.config || config);
+        if (data.file) next.background.file = data.file;
+        config = next;
+        touch();
+        render();
+        setStatus('已保存', 'ok');
+      })
+      .catch(function (err) {
+        setStatus('上传失败：' + mapError(err.message), 'bad');
+        console.error(err);
+      })
+      .then(function () {
+        uploading = false;
+        els.drop.classList.remove('busy');
+        els.fileInput.value = '';
+      });
+  }
+
+  function bindRange(el, key, label, fallback) {
+    el.addEventListener('input', function () {
+      var value = clampInt(el.value, 0, 100, fallback);
+      config.background[key] = value;
+      label.textContent = value + '%';
+      touch();
+      postConfig();
+    });
+    el.addEventListener('change', function () {
+      saveConfig();
+    });
+  }
+
+  els.drop.addEventListener('click', function () {
+    if (!uploading) els.fileInput.click();
+  });
+  els.drop.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (!uploading) els.fileInput.click();
+    }
+  });
+  els.fileInput.addEventListener('change', function () {
+    handleFile(els.fileInput.files && els.fileInput.files[0]);
+  });
+
+  ['dragenter', 'dragover'].forEach(function (name) {
+    els.drop.addEventListener(name, function (event) {
+      event.preventDefault();
+      if (!uploading) els.drop.classList.add('drag');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(function (name) {
+    els.drop.addEventListener(name, function (event) {
+      event.preventDefault();
+      els.drop.classList.remove('drag');
+    });
+  });
+  els.drop.addEventListener('drop', function (event) {
+    event.preventDefault();
+    els.drop.classList.remove('drag');
+    if (uploading) return;
+    var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    handleFile(file);
+  });
+
+  els.assetThumb.addEventListener('load', function () {
+    if (!els.assetThumb.getAttribute('data-file')) return;
+    els.assetInfo.textContent = els.assetThumb.naturalWidth + ' × ' + els.assetThumb.naturalHeight;
+  });
+  els.assetThumb.addEventListener('error', function () {
+    if (!els.assetThumb.getAttribute('data-file')) return;
+    els.assetInfo.textContent = '图片文件丢失，请重新上传';
+  });
+
+  els.removeBg.addEventListener('click', function () {
+    if (!config.background.file) return;
+    if (!confirm('删除当前自定义背景图？')) return;
+    config.background.file = '';
+    touch();
+    render();
+    saveConfig();
+  });
+
+  els.reset.addEventListener('click', function () {
+    if (!confirm('恢复默认皮肤，并删除当前自定义背景图？')) return;
+    config = clone(DEFAULT_CONFIG);
+    touch();
+    render();
+    saveConfig();
+  });
+
+  els.livePreview.addEventListener('change', function () {
+    els.preview.src = els.livePreview.checked ? '/' : '/?demo=1';
+  });
+  els.preview.addEventListener('load', postConfig);
+
+  bindRange(els.opacity, 'opacity', els.opacityVal, 100);
+  bindRange(els.scrim, 'scrim', els.scrimVal, 35);
+
+  buildSkinGrid();
+  buildFitButtons();
+  buildFocusGrid();
+  render();
+  loadConfig();
+})();
+</script>
+</body>
+</html>
