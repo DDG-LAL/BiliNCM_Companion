@@ -4,15 +4,15 @@
 
 > **唯一支持：网易云音乐 2.10.13。3.x 已确认不兼容；其他 2.x 版本未验证，不提供支持。**
 
-`License: MIT` · `Platform: Windows 10/11 x64` · `PowerShell: 5.1` · `Bot: 1.0.1`
+`License: MIT` · `Platform: Windows 10/11 x64` · `PowerShell: 5.1` · `Companion: 1.0.2` · `Bot: 1.0.1`
 
 **先把两个地址分清：**
 
 | 地址 | 是什么 | 怎么用 |
 |---|---|---|
-| `http://localhost:5555/` | 点歌机后台 / 控制面板 | 只用于扫码登录、填直播间房间号、查看连接状态；**不要**用它控制播放或队列 |
+| `http://localhost:5555/` | 高级后台 / 兼容入口 | 需要时可扫码登录、填房间号、查看连接状态；**不要**用它控制播放或队列 |
 | `http://127.0.0.1:5566/` | OBS 队列浮层 | **OBS 浏览器源只能填这个地址** |
-| `http://127.0.0.1:5566/settings` | 浮层皮肤 / 背景设置页 | 只在普通浏览器打开；**不要填进 OBS** |
+| `http://127.0.0.1:5566/settings` | 登录 / 房间 / 浮层设置页 | 扫码登录、连接直播间、换皮肤/背景；只在普通浏览器打开，**不要填进 OBS** |
 
 
 
@@ -49,8 +49,8 @@ BiliNCM-Bot 原版自己管播放：点歌一进来就自动播，需要时会�
 
 | 文件 | 大小 | 适合谁 |
 |---|---|---|
-| `BiliNCM_Companion-1.0.1-full.zip` | 约 75 MB | **第一次用的人**。官方 bot + 本项目全部脚本，解压即用 |
-| `BiliNCM_Companion-1.0.1-scripts.zip` | 约 60 KB | 已经有官方 portable 包，只想补脚本 |
+| `BiliNCM_Companion-1.0.2-full.zip` | 约 75 MB | **第一次用的人**。官方 bot + 本项目全部脚本，解压即用 |
+| `BiliNCM_Companion-1.0.2-scripts.zip` | 约 100 KB | 已经有官方 portable 包，只想补脚本 |
 | `SHA256SUMS.txt` | 约 1 KB | 想校验下载完整性 |
 
 **95% 的人只需要下第一个。**
@@ -66,7 +66,7 @@ BiliNCM-Bot 原版自己管播放：点歌一进来就自动播，需要时会�
 ### 1.3 校验（可选）
 
 ```powershell
-Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
+Get-FileHash .\BiliNCM_Companion-1.0.2-full.zip -Algorithm SHA256
 ```
 
 和 `SHA256SUMS.txt` 对比。
@@ -97,7 +97,8 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
    - 启动 companion、浮层服务、bot
    - 等点歌机后台的 5555 端口就绪、等 CDP 连上
 4. 看到 `点歌机已启动，CDP 已就绪` 就成功了
-5. 最后会问：
+5. 启动器会自动打开 5566 浮层和 5566 设置页，并关闭 bot 自动弹出的 5555 浏览器窗口。登录和房间号也可以直接在 5566 设置页完成。
+6. 最后会问：
 
    ```
    是否彻底关闭点歌机? [Y=关闭 / N=保持运行并关闭此窗口]
@@ -109,14 +110,16 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
    
    → 如果选 N ：会把cmd窗口关掉，如果使用完毕后需要关闭点歌机，只能点击‘关闭点歌机.cmd’，否则点歌机会一直留在后台运行
 
-### 2.3 填直播间房间号（5555 控制面板）
+### 2.3 登录 B 站并填直播间房间号（5566 设置页）
 
-1. 浏览器打开 <http://localhost:5555/>。这是**点歌机后台 / 控制面板**，不是 OBS 浮层地址。
-2. 进 bot 后台的「连接 / 设置」页。
-3. 填你的**直播间房间号**，保存。
-4. 页面显示已连接即可。
+1. 用普通浏览器打开 <http://127.0.0.1:5566/settings>。
+2. 在「直播登录」区域点「扫码登录」，用手机 B 站 App 扫码。
+3. 在「直播间房间号」里填你的房间号，点「连接直播间」。
+4. 页面显示已登录、已连接即可。
 
-**‘5555控制面板’里只做这三件事：**
+从 v1.0.2 开始，登录和房间号可以直接在 5566 设置页完成；旧的 5555 高级后台仍保留，但只建议用来查看状态或排查问题。
+
+**如果你仍然打开 5555 高级后台，只做查看：**
 
 | 可以做 | 不要做 |
 |---|---|
@@ -151,7 +154,7 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 
 #### 可选：换皮肤 / 自定义背景
 
-浏览器打开 <http://127.0.0.1:5566/settings>。这个页面同样只给普通浏览器用，**不要填进 OBS**。
+浏览器打开 <http://127.0.0.1:5566/settings>。同一个页面也用于扫码登录和连接直播间；它只给普通浏览器用，**不要填进 OBS**。
 
 - 6 套皮肤：默认暗色玻璃、霓虹赛博、雾白极简、樱花粉、复古像素、透明歌词
 - 可上传 PNG / JPEG 背景图（最大 12 MB），调整图片透明度、文字底衬和焦点位置
@@ -165,7 +168,8 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 ### 2.5 验收清单
 
 - [ ] 启动窗口最后显示 `点歌机已启动，CDP 已就绪`
-- [ ] `http://localhost:5555/` 能打开点歌机后台 / 控制面板
+- [ ] `http://127.0.0.1:5566/settings` 能打开，登录状态和直播间连接正常
+- [ ] `http://localhost:5555/` 仍可作为高级后台打开（启动器会自动关闭它自动弹出的窗口）
 - [ ] OBS 浮层底部是**绿点**，文字「已连接」
 - [ ] 用自己号发一条 `点歌 晴天`，这首歌会插在当前歌后面 / 最后一个待播之后（不一定是列表末尾）
 - [ ] 当前歌继续正常播放，没有被切掉
@@ -180,7 +184,8 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 
 1. 确认网易云已登录、正在放歌
 2. 双击 `启动点歌机.cmd`，等到 `CDP 已就绪`，输入 `N`
-3. 看 OBS 浮层是不是绿点
+3. 启动器会自动打开 5566 浮层和设置页，并关闭 bot 自动弹出的 5555 窗口
+4. 看 OBS 浮层是不是绿点
 
 点歌机已经在跑时，再次双击只会补启动缺失的组件，不会重复开。
 
@@ -238,7 +243,7 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 ### 3.6 更新
 
 1. 下播后双击 `关闭点歌机.cmd`
-2. 下载新版 `scripts.zip`，把里面的 `.ps1` / `.html` / `.cmd` / `qrcode.js` 覆盖到原目录（新版设置页 `BiliNCM-Overlay-Settings.html` 也在里面）
+2. 下载新版 `BiliNCM_Companion-1.0.2-scripts.zip`，把里面的 `.ps1` / `.html` / `.cmd` / `qrcode.js` / `README.md` 覆盖到原目录（新版设置页 `BiliNCM-Overlay-Settings.html` 也在里面）
 3. **不要覆盖 `current\` 文件夹和 `config.json`**，否则要重新扫码登录、重新填房间号；想保留皮肤和背景，也不要删 `overlay-config.json` 和 `overlay-assets\`
 4. 如果本机网易云装在非标准路径，把 `cloudmusic.exe` 的完整路径写进根目录 `ncm-path.txt`（一行，UTF-8）；升级时保留这个文件，不需要再修改启动器脚本
 5. 重新启动
@@ -357,7 +362,11 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 | 杀软拦截 PowerShell | 启动一闪而过 | 把整个目录加白名单 |
 | 端口 5555/5566 被占 | 启动失败 | 关掉残留进程再试 |
 
-### 5.3 不支持
+### 5.3 杀软误报说明
+
+v1.0.2 的启动器会用 PowerShell 调用 Windows `user32`，关闭 bot 自动弹出的 5555 浏览器窗口。部分杀软（已知火绒）可能把它误报为 `Trojan/PS.PsLoader.A`。脚本不会下载或执行远程载荷；如果遇到误报，请把整个点歌机目录加入信任，并确认文件来自本仓库的 GitHub Release。
+
+### 5.4 不支持
 
 - 网易云音乐 3.x（已确认不兼容）
 - 其他未验证的 2.x 版本（不提供支持）
@@ -400,11 +409,12 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 | `启动点歌机.cmd` | 一键启动 | 否 |
 | `关闭点歌机.cmd` | 彻底关闭 | 否 |
 | `调试登录.cmd` | 登录诊断 | 否 |
-| `BiliNCM-Launcher.ps1` | 启动编排、CDP 检查 | 否 |
+| `BiliNCM-Launcher.ps1` | 启动编排、CDP 检查、关闭 5555 自动弹窗、打开 5566 页面 | 否 |
 | `ncm-path.txt` | 本机网易云路径（可选，一行 UTF-8；可从 `ncm-path.txt.example` 复制） | 删掉后自动查找 |
+| `ncm-path.txt.example` | 网易云路径示例 | 可删 |
 | `BiliNCM-Companion.ps1` | 队列同步核心 | 否 |
 | `BiliNCM-Overlay.ps1` / `.html` | 浮层服务与页面 | 不用浮层可删 |
-| `BiliNCM-Overlay-Settings.html` | 皮肤 / 背景设置页（`5566/settings`） | 不用设置页可删；删后浮层仍正常 |
+| `BiliNCM-Overlay-Settings.html` | 登录 / 房间 / 皮肤 / 背景设置页（`5566/settings`） | 不用设置页可删；删后浮层仍正常 |
 | `overlay-config.json` | 皮肤 / 背景配置（自动生成） | 删掉即恢复默认；会丢失当前皮肤和背景设置 |
 | `overlay-assets\` | 上传的背景图（自动生成） | 删掉即删除背景；不要手动改文件名 |
 | `BiliLoginFix.ps1` | B 站扫码登录 | 否 |

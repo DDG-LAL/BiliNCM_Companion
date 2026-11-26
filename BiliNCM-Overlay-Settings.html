@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>浮层皮肤设置 · BiliNCM_Companion</title>
+<title>浮层设置 · BiliNCM_Companion</title>
 <style>
   :root{
     --page:#0b0f17;
@@ -60,6 +60,40 @@
   .block h2{margin:0 0 12px;font-size:13px;letter-spacing:.08em;color:#cfe3f5}
   .hint{margin:10px 0 0;color:var(--sub);font-size:11.5px;line-height:1.6}
   .hint b{color:#d9e7f5;font-weight:700}
+
+  .login-grid{display:flex;gap:18px;align-items:flex-start;justify-content:space-between}
+  .login-main{flex:1;min-width:0}
+  .login-status{display:flex;align-items:center;gap:8px;min-height:20px;font-size:12.5px;color:#cfe3f5}
+  .login-dot{
+    display:inline-block;flex:none;width:9px;height:9px;border-radius:50%;
+    background:var(--sub);box-shadow:0 0 0 4px rgba(143,160,181,.12);
+  }
+  .login-dot.ok{background:var(--good);box-shadow:0 0 0 4px rgba(52,211,153,.14)}
+  .login-dot.pending{background:#fbbf24;box-shadow:0 0 0 4px rgba(251,191,36,.14)}
+  .login-dot.bad{background:var(--bad);box-shadow:0 0 0 4px rgba(251,113,133,.14)}
+  .login-status b{font-weight:700}
+  .login-status span{min-width:0;color:var(--sub);font-size:11.5px}
+  .login-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+  .login-actions .btn{font-size:12px}
+  .room-row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+  .text-input{
+    flex:1;min-width:160px;padding:9px 11px;border-radius:10px;
+    color:var(--text);background:rgba(255,255,255,.045);
+    border:1px solid var(--line);font-size:12.5px;outline:none;
+  }
+  .text-input:focus{border-color:rgba(34,211,238,.45);box-shadow:0 0 0 2px rgba(34,211,238,.08)}
+  .text-input::placeholder{color:#607086}
+  .login-qr{
+    flex:none;width:184px;text-align:center;padding:10px;border-radius:14px;
+    background:rgba(255,255,255,.025);border:1px solid var(--line);
+  }
+  .login-qr img{display:block;width:160px;height:160px;margin:0 auto;border-radius:8px;background:#fff}
+  .login-qr span{display:block;margin-top:8px;font-size:10.5px;color:var(--sub);line-height:1.5}
+  .login-qr[hidden]{display:none!important}
+  @media (max-width:760px){
+    .login-grid{display:block}
+    .login-qr{width:auto;margin-top:14px}
+  }
 
   .skin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .skin-card{
@@ -220,9 +254,9 @@
 <div class="page">
   <header class="top">
     <div>
-      <h1>浮层皮肤设置</h1>
+      <h1>浮层设置</h1>
       <p>
-        这个页面只在普通浏览器里使用。<b>OBS 浏览器源仍然只填 <code>http://127.0.0.1:5566/</code></b>，不要填 <code>/settings</code>。保存后浮层会在 1～2 秒内自动更新，不需要重启点歌机。
+        这个页面用于扫码登录、填写直播间房间号，以及调整浮层皮肤和背景。<b>OBS 浏览器源仍然只填 <code>http://127.0.0.1:5566/</code></b>，不要填 <code>/settings</code>。皮肤和背景保存后浮层会在 1～2 秒内自动更新，不需要重启点歌机。
       </p>
     </div>
     <div class="save-state" id="saveState">读取中…</div>
@@ -230,6 +264,35 @@
 
   <main class="layout">
     <section class="controls">
+      <section class="block">
+        <h2>直播登录</h2>
+        <div class="login-grid">
+          <div class="login-main">
+            <div class="login-status">
+              <i class="login-dot" id="loginDot"></i>
+              <b id="loginState">检测中…</b>
+              <span id="loginHint"></span>
+            </div>
+            <div class="login-actions">
+              <button type="button" class="btn primary" id="loginStart" disabled>扫码登录</button>
+              <a class="btn" id="openBotAdmin" href="http://localhost:5555/" target="_blank" rel="noopener">高级：5555 后台</a>
+            </div>
+            <div class="field">
+              <span>直播间房间号</span>
+              <div class="room-row">
+                <input type="text" class="text-input" id="roomId" inputmode="numeric" autocomplete="off" placeholder="填写直播间房间号">
+                <button type="button" class="btn" id="roomConnect" disabled>连接直播间</button>
+              </div>
+            </div>
+            <p class="hint" id="loginNote">登录和房间号只保存在本机 <code>current\config.json</code>，不会上传；OBS 仍然只填 5566。</p>
+          </div>
+          <div class="login-qr" id="loginQrWrap" hidden>
+            <img id="loginQr" alt="B站登录二维码">
+            <span id="loginQrHint">使用手机 B站 APP 扫码</span>
+          </div>
+        </div>
+      </section>
+
       <section class="block">
         <h2>内置皮肤</h2>
         <div class="skin-grid" id="skinGrid"></div>
@@ -393,6 +456,12 @@
   var uploading = false;
   var obsUrl = 'http://127.0.0.1:' + (location.port || '5566') + '/';
   var statusTimer = null;
+  var BOT_BASE = 'http://localhost:5555';
+  var botOnline = false;
+  var loginBusy = false;
+  var loginQrSeen = false;
+  var roomEdited = false;
+  var loginPollTimer = null;
 
   var els = {
     saveState: document.getElementById('saveState'),
@@ -416,6 +485,16 @@
     copyObsUrl: document.getElementById('copyObsUrl'),
     obsUrlText: document.getElementById('obsUrlText'),
     openOverlay: document.getElementById('openOverlay'),
+    loginDot: document.getElementById('loginDot'),
+    loginState: document.getElementById('loginState'),
+    loginHint: document.getElementById('loginHint'),
+    loginStart: document.getElementById('loginStart'),
+    loginNote: document.getElementById('loginNote'),
+    loginQrWrap: document.getElementById('loginQrWrap'),
+    loginQr: document.getElementById('loginQr'),
+    loginQrHint: document.getElementById('loginQrHint'),
+    roomId: document.getElementById('roomId'),
+    roomConnect: document.getElementById('roomConnect'),
     livePreview: document.getElementById('livePreview'),
     preview: document.getElementById('preview')
   };
@@ -503,6 +582,161 @@
       }
       statusTimer = null;
     }, 2200);
+  }
+
+  function setLoginState(kind, text, hint) {
+    els.loginDot.className = 'login-dot' + (kind ? ' ' + kind : '');
+    els.loginState.textContent = text;
+    els.loginHint.textContent = hint || '';
+  }
+
+  function setBotOnline(online) {
+    botOnline = online;
+    els.loginStart.disabled = !online || loginBusy;
+    els.roomConnect.disabled = !online;
+  }
+
+  function botFetch(path, options) {
+    var opts = options || {};
+    var timeoutMs = opts.timeoutMs || 5000;
+    delete opts.timeoutMs;
+    opts.cache = 'no-store';
+    if (typeof AbortController === 'undefined') {
+      return fetch(BOT_BASE + path, opts);
+    }
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    opts.signal = ctrl.signal;
+    return fetch(BOT_BASE + path, opts).then(function (res) {
+      clearTimeout(timer);
+      return res;
+    }, function (err) {
+      clearTimeout(timer);
+      throw err;
+    });
+  }
+
+  function refreshLoginState() {
+    return botFetch('/api/config').then(readJson).then(function (data) {
+      setBotOnline(true);
+      var logged = !!data.biliLogin;
+      var uid = data.uid ? String(data.uid) : '';
+      if (logged) {
+        if (loginBusy) {
+          loginBusy = false;
+          els.loginQrWrap.hidden = true;
+        }
+        els.loginStart.textContent = '重新扫码登录';
+        var bits = [];
+        if (uid) { bits.push('UID 尾号 ' + uid.slice(-4)); }
+        if (data.roomId && Number(data.roomId) > 0) { bits.push('房间号 ' + data.roomId); }
+        setLoginState('ok', '已登录', bits.join(' · ') || '登录状态正常');
+      } else {
+        els.loginStart.textContent = '扫码登录';
+        setLoginState('pending', '未登录', '第一次使用请先扫码登录');
+      }
+      if (!roomEdited && data.roomId && Number(data.roomId) > 0) {
+        els.roomId.value = String(data.roomId);
+      }
+      return data;
+    }).catch(function () {
+      setBotOnline(false);
+      setLoginState('bad', '无法连接点歌机（5555）', '请确认点歌机已经启动');
+    });
+  }
+
+  function pollQrStatus() {
+    if (!loginBusy) return;
+    botFetch('/api/bili/qrstatus').then(readJson).then(function (data) {
+      setBotOnline(true);
+      if (data.qrBase64) {
+        loginQrSeen = true;
+        els.loginQr.src = data.qrBase64;
+        els.loginQrWrap.hidden = false;
+      }
+      var status = String(data.status || '等待扫码');
+      els.loginQrHint.textContent = status;
+      if (data.isLogin && loginQrSeen && /登录完成|登录成功/.test(status)) {
+        loginBusy = false;
+        loginQrSeen = false;
+        els.loginStart.disabled = false;
+        els.loginStart.textContent = '重新扫码登录';
+        els.loginQrWrap.hidden = true;
+        setLoginState('ok', '登录成功', '请填写直播间房间号并点击“连接直播间”');
+        refreshLoginState();
+        return;
+      }
+      setLoginState('pending', '等待扫码', status);
+      if (/失效|错误|失败/.test(status)) {
+        loginBusy = false;
+        loginQrSeen = false;
+        els.loginStart.disabled = false;
+        setLoginState('bad', '二维码不可用', status + '，请重新扫码');
+        return;
+      }
+      loginPollTimer = setTimeout(pollQrStatus, 1500);
+    }).catch(function () {
+      loginBusy = false;
+      els.loginStart.disabled = false;
+      setLoginState('bad', '扫码状态读取失败', '请确认点歌机仍在运行');
+    });
+  }
+
+  function startQrLogin() {
+    if (loginBusy) return;
+    if (!botOnline) {
+      setLoginState('bad', '未连接点歌机', '请确认点歌机已经启动');
+      return;
+    }
+    if (loginPollTimer) {
+      clearTimeout(loginPollTimer);
+      loginPollTimer = null;
+    }
+    loginBusy = true;
+    loginQrSeen = false;
+    els.loginStart.disabled = true;
+    els.loginQrWrap.hidden = true;
+    els.loginQr.removeAttribute('src');
+    els.loginQrHint.textContent = '正在获取二维码…';
+    setLoginState('pending', '正在登录…', '正在向 B站请求二维码');
+    botFetch('/api/bili/qrstart', { method: 'POST' }).then(readJson).then(function () {
+      setTimeout(pollQrStatus, 400);
+    }).catch(function () {
+      loginBusy = false;
+      els.loginStart.disabled = false;
+      setLoginState('bad', '无法发起扫码登录', '请确认点歌机仍在运行');
+    });
+  }
+
+  function connectRoom() {
+    if (!botOnline) {
+      setLoginState('bad', '未连接点歌机', '请确认点歌机已经启动');
+      return;
+    }
+    var id = parseInt(String(els.roomId.value || '').trim(), 10);
+    if (!id || id <= 0) {
+      setLoginState('bad', '房间号无效', '请输入数字直播间房间号');
+      return;
+    }
+    els.roomConnect.disabled = true;
+    setLoginState('pending', '正在连接直播间…', '房间号 ' + id);
+    botFetch('/api/room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId: id }),
+      timeoutMs: 15000
+    }).then(readJson).then(function (data) {
+      els.roomConnect.disabled = false;
+      if (data.success) {
+        roomEdited = false;
+        setLoginState('ok', '已连接直播间', '房间号 ' + id);
+      } else {
+        setLoginState('bad', '连接失败', '请先完成 B站登录，再确认房间号');
+      }
+    }).catch(function () {
+      els.roomConnect.disabled = false;
+      setLoginState('bad', '连接失败', '请确认点歌机仍在运行');
+    });
   }
 
   function touch() {
@@ -920,6 +1154,18 @@
     saveConfig();
   });
 
+  els.loginStart.addEventListener('click', startQrLogin);
+  els.roomConnect.addEventListener('click', connectRoom);
+  els.roomId.addEventListener('input', function () {
+    roomEdited = true;
+  });
+  els.roomId.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      connectRoom();
+    }
+  });
+
   els.livePreview.addEventListener('change', function () {
     els.preview.src = els.livePreview.checked ? '/' : '/?demo=1';
   });
@@ -933,6 +1179,10 @@
   buildFocusGrid();
   render();
   loadConfig();
+  refreshLoginState();
+  setInterval(function () {
+    if (!loginBusy) refreshLoginState();
+  }, 5000);
 })();
 </script>
 </body>

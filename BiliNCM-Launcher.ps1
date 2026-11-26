@@ -32,7 +32,8 @@ param(
     [switch]$NoLogCapture,
     [switch]$DebugLogin,
     [switch]$StopBot,
-    [switch]$ForceStop
+    [switch]$ForceStop,
+    [switch]$NoOpenBrowser
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,6 +61,7 @@ $NcmPathFile   = Join-Path $Root 'ncm-path.txt'
 $script:LogToFile = -not $CheckOnly
 $script:NcmPathChecked = $false
 $script:NcmPathValue = ''
+$script:BotWindowUtilReady = $false
 
 # ----------------------------------------------------------------------
 # 输出
@@ -100,6 +102,93 @@ function Write-LauncherLog {
         $line = '[{0}] [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Level, $Message
         Add-Content -LiteralPath $LauncherLog -Value $line -Encoding UTF8
     } catch { }
+}
+
+function Initialize-BotWindowUtil {
+    if ($script:BotWindowUtilReady) { return $true }
+    try {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public class BiliNCMWindowUtil {
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowTextLength(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+
+    public class WindowInfo {
+        public IntPtr Handle;
+        public string Title;
+        public uint ProcessId;
+    }
+
+    public static List<WindowInfo> GetVisibleWindows() {
+        var result = new List<WindowInfo>();
+        EnumWindows(delegate(IntPtr handle, IntPtr parameter) {
+            if (!IsWindowVisible(handle)) { return true; }
+            int length = GetWindowTextLength(handle);
+            if (length <= 0) { return true; }
+            var text = new StringBuilder(length + 2);
+            GetWindowText(handle, text, text.Capacity);
+            uint processId;
+            GetWindowThreadProcessId(handle, out processId);
+            result.Add(new WindowInfo { Handle = handle, Title = text.ToString(), ProcessId = processId });
+            return true;
+        }, IntPtr.Zero);
+        return result;
+    }
+
+    public static void Close(IntPtr handle) {
+        PostMessage(handle, 0x0010, IntPtr.Zero, IntPtr.Zero);
+    }
+}
+'@ -ErrorAction Stop
+        $script:BotWindowUtilReady = $true
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Close-BotFrontendWindowsOnce {
+    if (-not (Initialize-BotWindowUtil)) { return }
+    try {
+        $windows = [BiliNCMWindowUtil]::GetVisibleWindows()
+        foreach ($window in $windows) {
+            if ([string]$window.Title -match '^(Bili点歌机|BiliNCM-Bot 控制面板)( - Microsoft Edge)?$') {
+                [BiliNCMWindowUtil]::Close($window.Handle)
+                Write-Info2 ("已关闭点歌机自动打开的 5555 窗口: {0}" -f $window.Title)
+            }
+        }
+    } catch { }
+}
+
+function Open-OverlayBrowsers {
+    if ($NoOpenBrowser) { return }
+    $overlayUrl = "http://127.0.0.1:{0}/" -f $OverlayPort
+    $settingsUrl = "http://127.0.0.1:{0}/settings" -f $OverlayPort
+    try {
+        Start-Process -FilePath $overlayUrl | Out-Null
+        Start-Sleep -Milliseconds 350
+        Start-Process -FilePath $settingsUrl | Out-Null
+        Write-Ok2 ("已打开浮层: {0}" -f $overlayUrl)
+        Write-Ok2 ("已打开浮层设置: {0}" -f $settingsUrl)
+    } catch {
+        Write-Warn3 ("无法自动打开浏览器: {0}" -f $_.Exception.Message)
+    }
 }
 
 function Read-YesNo {
@@ -389,6 +478,7 @@ function Wait-StableCdpHealth {
     $last = $null
 
     do {
+        Close-BotFrontendWindowsOnce
         if (((Get-Date) - $start).TotalSeconds -lt $SettleSeconds) {
             Start-Sleep -Milliseconds 400
             continue
@@ -560,6 +650,7 @@ function Wait-BotUi {
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
+        Close-BotFrontendWindowsOnce
         if (Test-TcpPort -Port 5555 -TimeoutMs 500) { return $true }
         Start-Sleep -Milliseconds 500
     } while ((Get-Date) -lt $deadline)
@@ -583,6 +674,7 @@ function Wait-BotAutoPlayPaused {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     $last = $null
     do {
+        Close-BotFrontendWindowsOnce
         $last = Get-BotData
         if ($last) {
             $playingProp = $last.PSObject.Properties['playing']
@@ -842,7 +934,9 @@ if ($botProcs.Count -gt 0) {
     $null = Wait-BotAutoPlayPaused -TimeoutSeconds 10
     $ok = Ensure-Cdp -Reason 'bot-running'
     if ($ok) {
+        Close-BotFrontendWindowsOnce
         Write-Ok2 'CDP 正常，现有 bot 可以继续使用。'
+        Open-OverlayBrowsers
         exit 0
     }
     Write-Err2 'CDP 不可用；bot 仍在运行，但没有网易云控制能力。'
@@ -921,7 +1015,9 @@ $snap = Wait-StableCdpHealth -SettleSeconds 2 -TimeoutSeconds 15
 $cdpWait = [math]::Round(((Get-Date) - $cdpStarted).TotalSeconds, 1)
 Write-Info2 ("CDP 就绪检查耗时: {0} 秒" -f $cdpWait)
 if ($snap -and $snap.OrpheusTargets.Count -gt 0) {
+    Close-BotFrontendWindowsOnce
     Write-Ok2 '点歌机已启动，CDP 已就绪。'
+    Open-OverlayBrowsers
     exit 0
 }
 
@@ -931,5 +1027,7 @@ if (-not (Ensure-Cdp -Reason 'post-bot')) {
     exit 2
 }
 
+Close-BotFrontendWindowsOnce
 Write-Ok2 'CDP 已恢复；请保持网易云和 bot 运行。'
+Open-OverlayBrowsers
 exit 0
