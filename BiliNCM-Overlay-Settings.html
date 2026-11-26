@@ -281,8 +281,10 @@
 
       <div class="actions">
         <button type="button" class="btn" id="reset">恢复默认</button>
+        <button type="button" class="btn" id="copyObsUrl">复制 OBS 地址</button>
         <a class="btn" id="openOverlay" href="/" target="_blank" rel="noopener">打开浮层</a>
       </div>
+      <p class="hint" id="obsHint">OBS 浏览器源只填 <b id="obsUrlText">http://127.0.0.1:5566/</b>，不要填 <code>/settings</code>。</p>
     </section>
 
     <aside class="preview-col">
@@ -389,6 +391,8 @@
   var saving = false;
   var pendingSave = false;
   var uploading = false;
+  var obsUrl = 'http://127.0.0.1:' + (location.port || '5566') + '/';
+  var statusTimer = null;
 
   var els = {
     saveState: document.getElementById('saveState'),
@@ -409,10 +413,14 @@
     scrimVal: document.getElementById('scrimVal'),
     focusGrid: document.getElementById('focusGrid'),
     reset: document.getElementById('reset'),
+    copyObsUrl: document.getElementById('copyObsUrl'),
+    obsUrlText: document.getElementById('obsUrlText'),
     openOverlay: document.getElementById('openOverlay'),
     livePreview: document.getElementById('livePreview'),
     preview: document.getElementById('preview')
   };
+
+  els.obsUrlText.textContent = obsUrl;
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -481,6 +489,20 @@
   function setStatus(text, kind) {
     els.saveState.textContent = text;
     els.saveState.className = 'save-state' + (kind ? ' ' + kind : '');
+  }
+
+  function flashStatus(text, kind) {
+    if (statusTimer) { clearTimeout(statusTimer); }
+    var beforeText = els.saveState.textContent;
+    var beforeClass = els.saveState.className;
+    setStatus(text, kind);
+    statusTimer = setTimeout(function () {
+      if (els.saveState.textContent === text) {
+        els.saveState.textContent = beforeText;
+        els.saveState.className = beforeClass;
+      }
+      statusTimer = null;
+    }, 2200);
   }
 
   function touch() {
@@ -858,6 +880,36 @@
     touch();
     render();
     saveConfig();
+  });
+
+  function copyTextFallback(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.left = '-9999px';
+    area.style.top = '0';
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    document.body.removeChild(area);
+    return ok;
+  }
+
+  els.copyObsUrl.addEventListener('click', function () {
+    var done = function () { flashStatus('OBS 地址已复制', 'ok'); };
+    var fail = function () { flashStatus('复制失败，请手动复制 ' + obsUrl, 'bad'); };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(obsUrl).then(done, function () {
+        if (copyTextFallback(obsUrl)) { done(); } else { fail(); }
+      });
+    } else if (copyTextFallback(obsUrl)) {
+      done();
+    } else {
+      fail();
+    }
   });
 
   els.reset.addEventListener('click', function () {

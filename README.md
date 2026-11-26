@@ -240,7 +240,8 @@ Get-FileHash .\BiliNCM_Companion-1.0.1-full.zip -Algorithm SHA256
 1. 下播后双击 `关闭点歌机.cmd`
 2. 下载新版 `scripts.zip`，把里面的 `.ps1` / `.html` / `.cmd` / `qrcode.js` 覆盖到原目录（新版设置页 `BiliNCM-Overlay-Settings.html` 也在里面）
 3. **不要覆盖 `current\` 文件夹和 `config.json`**，否则要重新扫码登录、重新填房间号；想保留皮肤和背景，也不要删 `overlay-config.json` 和 `overlay-assets\`
-4. 重新启动
+4. 如果本机网易云装在非标准路径，把 `cloudmusic.exe` 的完整路径写进根目录 `ncm-path.txt`（一行，UTF-8）；升级时保留这个文件，不需要再修改启动器脚本
+5. 重新启动
 
 ### 3.7 常见操作速查
 
@@ -400,6 +401,7 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 | `关闭点歌机.cmd` | 彻底关闭 | 否 |
 | `调试登录.cmd` | 登录诊断 | 否 |
 | `BiliNCM-Launcher.ps1` | 启动编排、CDP 检查 | 否 |
+| `ncm-path.txt` | 本机网易云路径（可选，一行 UTF-8；可从 `ncm-path.txt.example` 复制） | 删掉后自动查找 |
 | `BiliNCM-Companion.ps1` | 队列同步核心 | 否 |
 | `BiliNCM-Overlay.ps1` / `.html` | 浮层服务与页面 | 不用浮层可删 |
 | `BiliNCM-Overlay-Settings.html` | 皮肤 / 背景设置页（`5566/settings`） | 不用设置页可删；删后浮层仍正常 |
@@ -419,6 +421,9 @@ Companion 只关心「哪些 id 是新的、哪些还没播」，**完全不读 
 
 # 网易云装在非标准路径
 .\启动点歌机.cmd -NcmExe "D:\CloudMusic\cloudmusic.exe"
+
+# 也可以把路径写在根目录 ncm-path.txt（一行，UTF-8）
+# 文件内容示例：D:\CloudMusic\cloudmusic.exe
 
 # 跳过 B 站登录检查（调试用）
 .\启动点歌机.cmd -SkipLoginCheck

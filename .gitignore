@@ -11,6 +11,7 @@ overlay-state.json
 overlay-config.json
 overlay-assets/
 probe-ncm.json
+ncm-path.txt
 *.tmp
 
 # ---- 日志 ----

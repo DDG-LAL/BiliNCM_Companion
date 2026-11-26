@@ -13,7 +13,7 @@
     - POST /api/overlay-config -> save config
     - POST /api/overlay-upload -> upload a PNG / JPEG background
     - GET /assets/<file>     -> uploaded background image
-    - GET /health            -> {"ok":true}
+    - GET /health            -> ok / port / pid / root / version / startedAt
     - GET /favicon.ico       -> 204
 
     Started and stopped by BiliNCM-Launcher.ps1. No bot / current\ /
@@ -40,6 +40,10 @@ $StateFile = Join-Path $Root 'overlay-state.json'
 $ConfigFile = Join-Path $Root 'overlay-config.json'
 $AssetsDir = Join-Path $Root 'overlay-assets'
 $LogFile = Join-Path $Root 'overlay.log'
+
+# Overlay build version for /health. Update when packaging.
+$OverlayVersion = '2026.11.26'
+$StartedAt = (Get-Date).ToString('o')
 
 $MaxBodyBytes = 20MB
 $MaxImageBytes = 12MB
@@ -602,6 +606,7 @@ try {
         exit 1
     }
 
+    Write-OverlayLog ("overlay version {0}; root {1}" -f $OverlayVersion, $Root)
     Write-OverlayLog ("overlay listening on http://127.0.0.1:{0}/" -f $Port)
     Write-OverlayLog ("settings page: http://127.0.0.1:{0}/settings" -f $Port)
 
@@ -790,8 +795,15 @@ try {
             }
 
             if ($path -eq '/health') {
-                $body = '{"ok":true,"port":' + $Port + '}'
-                Send-OverlayResponse -Stream $stream -Status 200 -ContentType 'application/json; charset=utf-8' -Body $body
+                $health = [pscustomobject]@{
+                    ok        = $true
+                    port      = $Port
+                    pid       = $PID
+                    root      = $Root
+                    version   = $OverlayVersion
+                    startedAt = $StartedAt
+                }
+                Send-OverlayJson -Stream $stream -Object $health
                 continue
             }
 

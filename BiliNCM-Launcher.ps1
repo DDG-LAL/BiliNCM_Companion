@@ -55,8 +55,11 @@ $OverlayStateFile = Join-Path $Root 'overlay-state.json'
 $OverlayPort   = 5566
 $LauncherLog   = Join-Path $Root 'launcher.log'
 $BotRuntimeLog = Join-Path $Root 'bot-runtime.log'
+$NcmPathFile   = Join-Path $Root 'ncm-path.txt'
 
 $script:LogToFile = -not $CheckOnly
+$script:NcmPathChecked = $false
+$script:NcmPathValue = ''
 
 # ----------------------------------------------------------------------
 # 输出
@@ -208,6 +211,46 @@ function Get-BotProcessList {
     return @(Get-Process -Name 'BiliNCM-Bot' -ErrorAction SilentlyContinue)
 }
 
+function Read-NcmPathFile {
+    param([string]$Path, [string]$BaseRoot)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) { return '' }
+    try {
+        $lines = @([IO.File]::ReadAllLines($Path, [Text.Encoding]::UTF8))
+        foreach ($raw in $lines) {
+            $line = ([string]$raw).Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            if ($line.StartsWith('#')) { continue }
+            $line = $line.Trim('"').Trim("'")
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            if ($line -eq '~') {
+                $line = $HOME
+            } elseif ($line.StartsWith('~\') -or $line.StartsWith('~/')) {
+                $line = Join-Path $HOME $line.Substring(2)
+            }
+            if (-not [IO.Path]::IsPathRooted($line)) {
+                $line = Join-Path $BaseRoot $line
+            }
+            try { $line = [IO.Path]::GetFullPath($line) } catch { }
+            if (Test-Path -LiteralPath $line) {
+                return (Resolve-Path -LiteralPath $line).Path
+            }
+            Write-Warn3 ("ncm-path.txt 中的路径不存在: {0}" -f $line)
+            return ''
+        }
+    } catch {
+        Write-Warn3 ("读取 ncm-path.txt 失败: {0}" -f $_.Exception.Message)
+    }
+    return ''
+}
+
+function Get-ConfiguredNcmPath {
+    if ($script:NcmPathChecked) { return $script:NcmPathValue }
+    $script:NcmPathChecked = $true
+    $script:NcmPathValue = Read-NcmPathFile -Path $NcmPathFile -BaseRoot $Root
+    return $script:NcmPathValue
+}
+
 function Resolve-NcmExe {
     param([string]$Preferred = '')
 
@@ -219,6 +262,11 @@ function Resolve-NcmExe {
     if ($main -and $main.ExecutablePath) {
         $candidates.Add([string]$main.ExecutablePath)
     }
+
+    # 便携版可以用根目录的 ncm-path.txt 固定本机网易云路径，
+    # 这样升级启动器时不需要再改脚本里的硬编码路径。
+    $configured = Get-ConfiguredNcmPath
+    if ($configured) { $candidates.Add($configured) }
 
     if ($env:LOCALAPPDATA) {
         $candidates.Add((Join-Path $env:LOCALAPPDATA 'Netease\CloudMusic\cloudmusic.exe'))
@@ -325,6 +373,37 @@ function Wait-CdpHealth {
         if ($last.OrpheusTargets.Count -gt 0) { return $last }
         Start-Sleep -Milliseconds 800
     } while ((Get-Date) -lt $deadline)
+    return $last
+}
+
+function Wait-StableCdpHealth {
+    param(
+        [int]$SettleSeconds = 2,
+        [int]$TimeoutSeconds = 15,
+        [int]$StableChecks = 2
+    )
+
+    $start = Get-Date
+    $deadline = $start.AddSeconds($TimeoutSeconds)
+    $stable = 0
+    $last = $null
+
+    do {
+        if (((Get-Date) - $start).TotalSeconds -lt $SettleSeconds) {
+            Start-Sleep -Milliseconds 400
+            continue
+        }
+
+        $last = Get-CdpSnapshot -TimeoutSec 1
+        if ($last.OrpheusTargets.Count -gt 0) {
+            $stable += 1
+            if ($stable -ge $StableChecks) { return $last }
+        } else {
+            $stable = 0
+        }
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+
     return $last
 }
 
@@ -835,10 +914,13 @@ if (-not (Wait-BotUi -TimeoutSeconds 25)) {
 
 $null = Wait-BotAutoPlayPaused -TimeoutSeconds 10
 
-# bot 启动后自己可能会重启网易云；等它完成后再检查一次。
-Start-Sleep -Seconds 5
-$snap = Wait-CdpHealth -TimeoutSeconds 15
-if ($snap.OrpheusTargets.Count -gt 0) {
+# bot 启动后自己可能会重启网易云；先给它 2 秒稳定时间，
+# 然后边等边查，连续两次看到 CDP 目标就提前结束，最多等 15 秒。
+$cdpStarted = Get-Date
+$snap = Wait-StableCdpHealth -SettleSeconds 2 -TimeoutSeconds 15
+$cdpWait = [math]::Round(((Get-Date) - $cdpStarted).TotalSeconds, 1)
+Write-Info2 ("CDP 就绪检查耗时: {0} 秒" -f $cdpWait)
+if ($snap -and $snap.OrpheusTargets.Count -gt 0) {
     Write-Ok2 '点歌机已启动，CDP 已就绪。'
     exit 0
 }
