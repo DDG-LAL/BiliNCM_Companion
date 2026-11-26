@@ -5,6 +5,11 @@ packages/
 Update.exe
 .portable
 
+# ---- 本地备份与打包产物 ----
+overlay-backup-*/
+update-backup-*/
+BiliNCM_Companion-*.zip
+
 # ---- 凭据与运行状态（严禁入库）----
 config.json
 overlay-state.json
@@ -16,7 +21,7 @@ ncm-path.txt
 
 # ---- 日志 ----
 *.log
-*.log.1
+*.log.*
 
 # ---- 系统 ----
 Thumbs.db
